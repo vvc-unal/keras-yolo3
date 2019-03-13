@@ -186,8 +186,10 @@ def detect_video(yolo, video_path, output_path=""):
     curr_fps = 0
     fps = "FPS: ??"
     prev_time = timer()
-    while True:
+    while vid.isOpened():
         return_value, frame = vid.read()
+        if not return_value:
+            break
         image = Image.fromarray(frame)
         image = yolo.detect_image(image)
         result = np.asarray(image)
@@ -201,7 +203,7 @@ def detect_video(yolo, video_path, output_path=""):
             fps = "FPS: " + str(curr_fps)
             curr_fps = 0
         cv2.putText(result, text=fps, org=(3, 15), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.50, color=(255, 0, 0), thickness=2)
+                    fontScale=0.50, color=(255, 0, 0), thickness=1)
         cv2.namedWindow("result", cv2.WINDOW_NORMAL)
         cv2.imshow("result", result)
         if isOutput:

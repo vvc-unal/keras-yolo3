@@ -5,6 +5,12 @@
 logs/
 *_test.py
 
+# Eclipse IDE
+.settings/*
+video/*
+/.project
+/.pydevproject
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
