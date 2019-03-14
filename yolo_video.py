@@ -25,17 +25,17 @@ if __name__ == '__main__':
     Command line options
     '''
     parser.add_argument(
-        '--model', type=str,
+        '--model', type=str, dest='model_path', default='logs/000/trained_weights_final.h5',
         help='path to model weight file, default ' + YOLO.get_defaults("model_path")
     )
 
     parser.add_argument(
-        '--anchors', type=str,
+        '--anchors', type=str, dest='anchors_path', default='model_data/vvc_anchors.txt',
         help='path to anchor definitions, default ' + YOLO.get_defaults("anchors_path")
     )
 
     parser.add_argument(
-        '--classes', type=str,
+        '--classes', type=str, dest='classes_path', default='model_data/voc_classes.txt',
         help='path to class definitions, default ' + YOLO.get_defaults("classes_path")
     )
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     Command line positional arguments -- for video detection mode
     '''
     parser.add_argument(
-        "--input", nargs='?', type=str,required=False,default='./path2your_video',
+        "--input", nargs='?', type=str,required=False, default='./video/MOV_0861.mp4',
         help = "Video input path"
     )
 
