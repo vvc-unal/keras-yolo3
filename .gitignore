@@ -1,3 +1,4 @@
+
 *.jpg
 *.png
 *.weights
@@ -6,8 +7,9 @@ logs/
 *_test.py
 
 # Eclipse IDE
-.settings/*
-video/*
+.settings/
+tags/
+video/
 /.project
 /.pydevproject
 
