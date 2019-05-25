@@ -13,14 +13,18 @@ from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_l
 from yolo3.utils import get_random_data
 
 
-def _main():
+def _main( ):
+    model_name = 'tm'
     annotation_path = 'tags/train.txt'
     log_dir = 'logs/000/'
-    classes_path = 'model_data/voc_classes.txt'
-    anchors_path = 'yolo_anchors.txt'
+    classes_path = 'model_data/' + model_name + '_classes.txt'
+    anchors_path = 'model_data/' + model_name + '_anchors.txt'
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
+    
+    frozen_epochs = 10
+    unfreeze_epochs = 20
 
     input_shape = (416, 416) # multiple of 32, hw
 
@@ -60,7 +64,7 @@ def _main():
                 steps_per_epoch=max(1, num_train//batch_size),
                 validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors, num_classes),
                 validation_steps=max(1, num_val//batch_size),
-                epochs=10,
+                epochs=frozen_epochs,
                 initial_epoch=0,
                 callbacks=[logging, checkpoint])
         model.save_weights(log_dir + 'trained_weights_stage_1.h5')
@@ -79,10 +83,12 @@ def _main():
             steps_per_epoch=max(1, num_train//batch_size),
             validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors, num_classes),
             validation_steps=max(1, num_val//batch_size),
-            epochs=20,
-            initial_epoch=10,
+            epochs=frozen_epochs + unfreeze_epochs,
+            initial_epoch=frozen_epochs,
             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
         model.save_weights(log_dir + 'trained_weights_final.h5')
+        
+        model.save_weights('model_data/' + model_name + '_weights.h5')
 
     # Further training if needed.
 

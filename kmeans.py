@@ -57,8 +57,9 @@ class YOLO_Kmeans:
 
         return clusters
 
-    def result2txt(self, data):
-        f = open("yolo_anchors.txt", 'w')
+    def result2txt(self, anchors_file="model_data/yolo_anchors.txt"):
+        data = self.result
+        f = open(anchors_file, 'w')
         row = np.shape(data)[0]
         for i in range(row):
             if i == 0:
@@ -87,15 +88,23 @@ class YOLO_Kmeans:
     def txt2clusters(self):
         all_boxes = self.txt2boxes()
         result = self.kmeans(all_boxes, k=self.cluster_number)
-        result = result[np.lexsort(result.T[0, None])]
-        self.result2txt(result)
-        print("K anchors:\n {}".format(result))
-        print("Accuracy: {:.2f}%".format(
-            self.avg_iou(all_boxes, result) * 100))
+        self.result = result[np.lexsort(result.T[0, None])]
+        
+        #print("K anchors:\n {}".format(result))
+        print("k: {},  Accuracy: {:.2f}%".format(self.cluster_number,
+                                                 self.avg_iou(all_boxes, result) * 100))
 
 
 if __name__ == "__main__":
+    # Run tf_voc_annotation first
+    for cluster_number in range(2, 10):
+        filename = "tags/train.txt"
+        kmeans = YOLO_Kmeans(cluster_number, filename)
+        kmeans.txt2clusters()
+    
     cluster_number = 9
+    anchors_filename = "model_data/tm_anchors.txt"
     filename = "tags/train.txt"
     kmeans = YOLO_Kmeans(cluster_number, filename)
     kmeans.txt2clusters()
+    kmeans.result2txt(anchors_filename)

@@ -3,8 +3,10 @@
 *.png
 *.weights
 *.h5
-logs/
 *_test.py
+logs/
+/model_data/
+
 
 # Eclipse IDE
 .settings/
