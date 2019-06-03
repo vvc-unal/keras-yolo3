@@ -4,7 +4,8 @@
 *.weights
 *.h5
 *_test.py
-logs/
+/logs
+/logs/
 /model_data/
 
 
