@@ -14,7 +14,7 @@ from yolo3.utils import get_random_data
 
 
 def _main( ):
-    model_name = 'tm'
+    model_name = 'yolov3-tiny-transfer'
     annotation_path = 'tags/train.txt'
     log_dir = 'logs/000/'
     classes_path = 'model_data/' + model_name + '_classes.txt'
@@ -31,7 +31,7 @@ def _main( ):
     is_tiny_version = len(anchors)==6 # default setting
     if is_tiny_version:
         model = create_tiny_model(input_shape, anchors, num_classes,
-            freeze_body=2, weights_path='model_data/tiny_yolo_weights.h5')
+            freeze_body=2, weights_path='model_data/yolov3-tiny_weights.h5')
     else:
         model = create_model(input_shape, anchors, num_classes,
             freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze

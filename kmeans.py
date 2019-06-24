@@ -95,16 +95,24 @@ class YOLO_Kmeans:
                                                  self.avg_iou(all_boxes, result) * 100))
 
 
-if __name__ == "__main__":
-    # Run tf_voc_annotation first
-    for cluster_number in range(2, 10):
-        filename = "tags/train.txt"
-        kmeans = YOLO_Kmeans(cluster_number, filename)
-        kmeans.txt2clusters()
-    
-    cluster_number = 9
-    anchors_filename = "model_data/tm_anchors.txt"
-    filename = "tags/train.txt"
+def find_anchors(train_filename, cluster_number, anchors_filename=None):
+    """
+    For YOLOv3 use 9 clusters
+    For YOLOv3-tiny use 6 clusters
+    """
     kmeans = YOLO_Kmeans(cluster_number, filename)
     kmeans.txt2clusters()
-    kmeans.result2txt(anchors_filename)
+    if anchors_filename:
+        kmeans.result2txt(anchors_filename)
+
+if __name__ == "__main__":
+    # Run tf_voc_annotation first
+    
+    filename = "tags/train.txt"
+    
+    for cluster_number in range(2, 10):
+        find_anchors(filename, cluster_number)
+        
+    find_anchors(filename, 6, "model_data/yolov3-tiny-transfer_anchors.txt")
+    
+    
