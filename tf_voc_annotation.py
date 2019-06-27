@@ -5,14 +5,16 @@ from os import getcwd, environ, path
 # TODO load sets and classes dynamically 
 sets=['car_train', 'car_val', 'motorbike_train', 'motorbike_val']
 
-sets=['seg_train', 'seg_val', 'tu_llave_train', 'tu_llave_val']
+sets_tm=['seg_train', 'seg_val', 'tu_llave_train', 'tu_llave_val']
 
-data_set_folder = path.join(environ['HOME'], 'workspace/Maestria/Videos',
+data_set_folder = path.join(environ['HOME'], 'workspace/Maestria/Videos', 'tf_pascal_voc')
+
+data_set_folder_tm = path.join(environ['HOME'], 'workspace/Maestria/Videos',
                             'TM/TrabajadoresYPolicias', 'tf_pascal_voc')
 
 classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
-classes = ["tu_llave", "seg"]
+classes_tm = ["tu_llave", "seg"]
 
 def convert_annotation(image_id, list_file):
     in_file = open(path.join(data_set_folder, 'Annotations/%s.xml'%(image_id)))
