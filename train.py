@@ -13,9 +13,10 @@ from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, Ear
 from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
 from yolo3.utils import get_random_data
 
+import yolo3.model as yolo3_model
+
 
 input_shape = (416, 416)  # multiple of 32, hw
-
 
 def yolov3_training():
     model_name = 'yolov3-transfer'
@@ -56,6 +57,27 @@ def tiny_yolov3_training():
              anchors_path=anchors_path, 
              frozen_epochs=1, 
              unfreeze_epochs=0)
+
+def vvc_yolov3_training():
+    model_name = 'vvc1-yolov3'
+    classes_path = 'model_data/coco_classes.txt'
+    anchors_path = 'model_data/tiny_yolo_anchors.txt'
+    
+    class_names = get_classes(classes_path)
+    num_classes = len(class_names)
+    anchors = get_anchors(anchors_path)
+    num_anchors = len(anchors)
+        
+    assert len(anchors)==6 # default setting
+    
+    model = create_vvc_model(input_shape, anchors, num_classes)
+    
+    training(model_name=model_name, 
+             model=model, 
+             classes_path=classes_path, 
+             anchors_path=anchors_path, 
+             frozen_epochs=0, 
+             unfreeze_epochs=1)
     
 
 def training(model_name, model, classes_path, anchors_path, frozen_epochs=50, unfreeze_epochs=50):
@@ -201,6 +223,26 @@ def create_tiny_model(input_shape, anchors, num_classes, load_pretrained=True, f
 
     return model
 
+def create_vvc_model(input_shape, anchors, num_classes):
+    '''create the training model, for VVC YOLOv3'''
+    K.clear_session() # get a new session
+    image_input = Input(shape=(None, None, 3))
+    h, w = input_shape
+    num_anchors = len(anchors)
+
+    y_true = [Input(shape=(h//{0:32, 1:16}[l], w//{0:32, 1:16}[l], \
+        num_anchors//2, num_classes+5)) for l in range(2)]
+
+    model_body = yolo3_model.vvc1_yolo_body(image_input, num_anchors//2, num_classes)
+    print('Create VVC YOLOv3 model with {} anchors and {} classes.'.format(num_anchors, num_classes))
+
+    model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
+        arguments={'anchors': anchors, 'num_classes': num_classes, 'ignore_thresh': 0.7})(
+        [*model_body.output, *y_true])
+    model = Model([model_body.input, *y_true], model_loss)
+
+    return model
+
 def data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes):
     '''data generator for fit_generator'''
     n = len(annotation_lines)
@@ -226,4 +268,4 @@ def data_generator_wrapper(annotation_lines, batch_size, input_shape, anchors, n
     return data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes)
 
 if __name__ == '__main__':
-    tiny_yolov3_training()
+    vvc_yolov3_training()
