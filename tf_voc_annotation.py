@@ -3,7 +3,7 @@ from os import getcwd, environ, path
 
 
 # TODO load sets and classes dynamically 
-sets=['car_train', 'car_val', 'motorbike_train', 'motorbike_val']
+sets=['bicycle_train', 'bus_train', 'bicycle_val', 'bus_val', 'car_train', 'car_val', 'motorbike_train', 'motorbike_val']
 
 sets_tm=['seg_train', 'seg_val', 'tu_llave_train', 'tu_llave_val']
 

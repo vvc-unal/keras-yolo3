@@ -9,6 +9,7 @@ from keras.layers import Input, Lambda
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
+import matplotlib.pyplot as plt
 
 from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
 from yolo3.utils import get_random_data
@@ -60,7 +61,7 @@ def tiny_yolov3_training():
 
 def vvc_yolov3_training():
     model_name = 'vvc1-yolov3'
-    classes_path = 'model_data/coco_classes.txt'
+    classes_path = 'model_data/voc_classes.txt'
     anchors_path = 'model_data/tiny_yolo_anchors.txt'
     
     class_names = get_classes(classes_path)
@@ -75,7 +76,7 @@ def vvc_yolov3_training():
              model=model, 
              classes_path=classes_path, 
              anchors_path=anchors_path, 
-             unfreeze_epochs=40)
+             unfreeze_epochs=50)
     
 
 def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unfreeze_epochs=50):
@@ -89,7 +90,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
     
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
-        monitor='val_loss', save_weights_only=True, save_best_only=True, period=3)
+        monitor='val_loss', save_weights_only=True, save_best_only=True, period=5)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
 
@@ -128,9 +129,9 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
         model.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
         print('Unfreeze all of the {} layers.'.format(len(model.layers)))
 
-        batch_size = 14 # note that more GPU memory is required after unfreezing the body
+        batch_size = 16 # note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
-        model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
+        history = model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
             steps_per_epoch=max(1, num_train//batch_size),
             validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors, num_classes),
             validation_steps=max(1, num_val//batch_size),
@@ -144,6 +145,30 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
     model.save_weights(model_folder.joinpath('weights.h5'))
 
     # Further training if needed.
+    
+    plot_training_history(history)
+    
+    
+def plot_training_history(history):
+    # Plot training & validation loss values
+   
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    
+    ax1.plot(history.history['loss'])
+    ax1.plot(history.history['val_loss'])
+    ax1.set_ylabel('Loss')
+    ax1.set_xlabel('Epoch')
+    ax1.legend(['Train', 'Test'], loc='upper left')
+    
+    ax2.plot(history.history['lr'], 'k--')
+    ax2.set_ylabel('Learning rate')
+    ax2.legend(['lr'], loc='upper right')
+    
+    plt.title('Model loss')
+    
+    plt.show()
+
 
 
 def get_classes(classes_path):
