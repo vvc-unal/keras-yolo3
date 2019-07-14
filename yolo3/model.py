@@ -5,7 +5,7 @@ from functools import wraps
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from keras.layers import Conv2D, Add, ZeroPadding2D, UpSampling2D, Concatenate, MaxPooling2D
+from keras.layers import Conv2D, Add, ZeroPadding2D, UpSampling2D, Concatenate, MaxPooling2D, Dropout
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
@@ -121,6 +121,7 @@ def tiny_yolo_body(inputs, num_anchors, num_classes):
 def vvc1_yolo_body(inputs, num_anchors, num_classes):
     '''Create a based Tiny YOLO_v3 model CNN body in keras.'''
     x1 = compose(
+            DarknetConv2D_BN_Leaky(8, (3,3)),
             DarknetConv2D_BN_Leaky(16, (3,3)),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
             DarknetConv2D_BN_Leaky(32, (3,3)),

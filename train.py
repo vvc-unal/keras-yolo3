@@ -66,7 +66,6 @@ def vvc_yolov3_training():
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
-    num_anchors = len(anchors)
         
     assert len(anchors)==6 # default setting
     
@@ -76,11 +75,10 @@ def vvc_yolov3_training():
              model=model, 
              classes_path=classes_path, 
              anchors_path=anchors_path, 
-             frozen_epochs=0, 
-             unfreeze_epochs=1)
+             unfreeze_epochs=40)
     
 
-def training(model_name, model, classes_path, anchors_path, frozen_epochs=50, unfreeze_epochs=50):
+def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unfreeze_epochs=50):
     
     annotation_path = 'tags/train.txt'
     log_dir = 'logs/000/'
@@ -92,7 +90,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=50, un
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
         monitor='val_loss', save_weights_only=True, save_best_only=True, period=3)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
 
     val_split = 0.2
@@ -128,7 +126,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=50, un
         for i in range(len(model.layers)):
             model.layers[i].trainable = True
         model.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
-        print('Unfreeze all of the layers.')
+        print('Unfreeze all of the {} layers.'.format(len(model.layers)))
 
         batch_size = 14 # note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
@@ -240,7 +238,7 @@ def create_vvc_model(input_shape, anchors, num_classes):
         arguments={'anchors': anchors, 'num_classes': num_classes, 'ignore_thresh': 0.7})(
         [*model_body.output, *y_true])
     model = Model([model_body.input, *y_true], model_loss)
-
+    
     return model
 
 def data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes):
