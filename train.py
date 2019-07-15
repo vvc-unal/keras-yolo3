@@ -60,16 +60,16 @@ def tiny_yolov3_training():
              unfreeze_epochs=0)
 
 def vvc_yolov3_training():
-    model_name = 'vvc1-yolov3'
+    model_name = 'vvc2-yolov3'
     classes_path = 'model_data/voc_classes.txt'
-    anchors_path = 'model_data/tiny_yolo_anchors.txt'
+    anchors_path = 'model_data/anchors/tiny-yolov3-transfer.txt'
     
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
-        
-    assert len(anchors)==6 # default setting
     
+    assert len(anchors)==6 # default setting
+        
     model = create_vvc_model(input_shape, anchors, num_classes)
     
     training(model_name=model_name, 
@@ -82,16 +82,18 @@ def vvc_yolov3_training():
 def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unfreeze_epochs=50):
     
     annotation_path = 'tags/train.txt'
-    log_dir = 'logs/000/'
+    log_dir = 'logs/' + model_name + '/'
+    log_dir = Path('logs/').joinpath(model_name + '/')
+    log_dir.mkdir(exist_ok=True)
    
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
     
     logging = TensorBoard(log_dir=log_dir)
-    checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
+    checkpoint = ModelCheckpoint(str(log_dir) + '/' + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
         monitor='val_loss', save_weights_only=True, save_best_only=True, period=5)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, verbose=1)
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
 
     val_split = 0.2
@@ -119,7 +121,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
                 epochs=frozen_epochs,
                 initial_epoch=0,
                 callbacks=[logging, checkpoint])
-        model.save_weights(log_dir + 'trained_weights_stage_1.h5')
+        model.save_weights(log_dir.joinpath('trained_weights_stage_1.h5'))
 
     # Unfreeze and continue training, to fine-tune.
     # Train longer if the result is not good.
@@ -138,7 +140,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
             epochs=frozen_epochs + unfreeze_epochs,
             initial_epoch=frozen_epochs,
             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
-        model.save_weights(log_dir + 'trained_weights_final.h5')
+        model.save_weights(log_dir.joinpath('trained_weights_final.h5'))
     
     model_folder = Path('model_data/' + model_name)
     model_folder.mkdir(exist_ok=True)
@@ -159,11 +161,11 @@ def plot_training_history(history):
     ax1.plot(history.history['val_loss'])
     ax1.set_ylabel('Loss')
     ax1.set_xlabel('Epoch')
-    ax1.legend(['Train', 'Test'], loc='upper left')
+    ax1.legend(['Train', 'Val'], loc='lower right')
     
     ax2.plot(history.history['lr'], 'k--')
     ax2.set_ylabel('Learning rate')
-    ax2.legend(['lr'], loc='upper right')
+    ax2.legend(['learning rate'], loc='upper left')
     
     plt.title('Model loss')
     
@@ -256,7 +258,7 @@ def create_vvc_model(input_shape, anchors, num_classes):
     y_true = [Input(shape=(h//{0:32, 1:16}[l], w//{0:32, 1:16}[l], \
         num_anchors//2, num_classes+5)) for l in range(2)]
 
-    model_body = yolo3_model.vvc1_yolo_body(image_input, num_anchors//2, num_classes)
+    model_body = yolo3_model.vvc2_yolo_body(image_input, num_anchors//2, num_classes)
     print('Create VVC YOLOv3 model with {} anchors and {} classes.'.format(num_anchors, num_classes))
 
     model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',

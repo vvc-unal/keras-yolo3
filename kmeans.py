@@ -113,7 +113,7 @@ if __name__ == "__main__":
     for cluster_number in range(2, 10):
         find_anchors(filename, cluster_number)
         
-    find_anchors(filename, 9, "model_data/yolov3-transfer_anchors.txt")
-    find_anchors(filename, 6, "model_data/yolov3-tiny-transfer_anchors.txt")
+    find_anchors(filename, 9, "model_data/anchors/yolov3-transfer.txt")
+    find_anchors(filename, 6, "model_data/anchors/tiny-yolov3-transfer.txt")
     
     
