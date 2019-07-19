@@ -189,9 +189,9 @@ def vvc3_yolo_body(inputs, num_anchors, num_classes):
     x1 = compose(
             Conv2D(16, (3,3)),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
-            DarknetConv2D_BN_Leaky(32, (3,3)),
+            Conv2D(32, (3,3)),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
-            DarknetConv2D_BN_Leaky(64, (3,3)),
+            Conv2D(64, (3,3)),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
             DarknetConv2D_BN_Leaky(128, (3,3)),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
@@ -215,7 +215,6 @@ def vvc3_yolo_body(inputs, num_anchors, num_classes):
             DarknetConv2D(num_anchors*(num_classes+5), (1,1)))([x2,x1])
 
     return Model(inputs, [y1,y2])
-
 
 def yolo_head(feats, anchors, num_classes, input_shape, calc_loss=False):
     """Convert final layer features to bounding box parameters."""

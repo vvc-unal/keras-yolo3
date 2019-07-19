@@ -41,9 +41,9 @@ def yolov3_training():
              unfreeze_epochs=50)
     
 def tiny_yolov3_training():
-    model_name = 'tiny-yolov3'
-    classes_path = 'model_data/coco_classes.txt'
-    anchors_path = 'model_data/tiny_yolo_anchors.txt'
+    model_name = 'tiny-yolov3-pretrained'
+    classes_path = 'model_data/voc_classes.txt'
+    anchors_path = 'model_data/anchors/tiny-yolov3-transfer.txt'
     
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
@@ -51,7 +51,7 @@ def tiny_yolov3_training():
         
     assert len(anchors)==6 # default setting
     
-    model = create_tiny_model(input_shape, anchors, num_classes, load_pretrained=False,
+    model = create_tiny_model(input_shape, anchors, num_classes, load_pretrained=True,
             freeze_body=2, weights_path='model_data/yolov3-tiny_weights.h5')
     
     training(model_name=model_name, 
@@ -59,10 +59,10 @@ def tiny_yolov3_training():
              classes_path=classes_path, 
              anchors_path=anchors_path, 
              frozen_epochs=0, 
-             unfreeze_epochs=2)
+             unfreeze_epochs=50)
 
 def vvc_yolov3_training():
-    model_name = 'vvc2-yolov3'
+    model_name = 'vvc3-yolov3'
     classes_path = 'model_data/voc_classes.txt'
     anchors_path = 'model_data/anchors/tiny-yolov3-transfer.txt'
     
@@ -72,13 +72,13 @@ def vvc_yolov3_training():
     
     assert len(anchors)==6 # default setting
             
-    model = create_vvc_model(yolo3_model.vvc2_yolo_body, input_shape, anchors, num_classes)
+    model = create_vvc_model(yolo3_model.vvc3_yolo_body, input_shape, anchors, num_classes)
     
     training(model_name=model_name,
              model=model, 
              classes_path=classes_path, 
              anchors_path=anchors_path, 
-             unfreeze_epochs=5)
+             unfreeze_epochs=50)
     
         
 def read_training_log(model_name):
@@ -107,7 +107,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
     
     annotation_path = 'tags/train.txt'
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_dir = Path('logs/'+ model_name + ' f{} u{} {}/'.format(frozen_epochs, unfreeze_epochs,timestamp))
+    log_dir = Path('logs/'+ model_name + ' f{:03d} u{:03d} {}/'.format(frozen_epochs, unfreeze_epochs,timestamp))
     log_dir.mkdir(exist_ok=True)
     model_folder = Path('model_data/' + model_name)
     model_folder.mkdir(exist_ok=True)
@@ -150,7 +150,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
                 epochs=frozen_epochs,
                 initial_epoch=0,
                 callbacks=[logging, checkpoint, csv_logger])
-        model.save_weights(log_dir.joinpath('trained_weights_stage_1.h5'))
+        model.save_weights(log_dir.joinpath('weights_stage_1.h5'))
 
     # Unfreeze and continue training, to fine-tune.
     # Train longer if the result is not good.
@@ -170,14 +170,11 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
             initial_epoch=frozen_epochs,
             callbacks=[logging, checkpoint, csv_logger, reduce_lr, early_stopping])
         
-        model.save_weights(log_dir.joinpath('trained_weights_final.h5'))
+        model.save_weights(log_dir.joinpath('weights_final.h5'))
     
-   
-    model.save_weights(model_folder.joinpath('weights.h5'))
-
     # Further training if needed.
     
-    plot_training_history(history, model_folder.joinpath('history.png'))
+    plot_training_history(history, log_dir.joinpath('history.png'))
         
     
 def plot_training_history(history, save_path):
@@ -347,5 +344,5 @@ def data_generator_wrapper(annotation_lines, batch_size, input_shape, anchors, n
     return data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes)
 
 if __name__ == '__main__':
+    #tiny_yolov3_training()
     vvc_yolov3_training()
-    plot_training_log()
