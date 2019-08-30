@@ -185,13 +185,11 @@ def vvc2_yolo_body(inputs, num_anchors, num_classes):
     return Model(inputs, [y1,y2])
 
 def vvc3_yolo_body(inputs, num_anchors, num_classes):
-    '''Create a based Tiny YOLO_v3 model CNN body in keras.'''
+    '''Create a based Tiny YOLO_v3 model CNN body. Remove one Conv layer'''
     x1 = compose(
             Conv2D(16, (3,3)),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
-            Conv2D(32, (3,3)),
-            MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
-            Conv2D(64, (3,3)),
+            Conv2D(64, (5,5), strides=2),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
             DarknetConv2D_BN_Leaky(128, (3,3)),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),

@@ -121,7 +121,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
     checkpoint = ModelCheckpoint(str(log_dir.joinpath('ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5')),
         monitor='val_loss', save_weights_only=True, save_best_only=True, period=5)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
-    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=5, verbose=1)
     csv_logger = CSVLogger(str(model_folder.joinpath('training_log.csv')))
 
     # Train/Val split
