@@ -3,7 +3,9 @@ from os import getcwd, environ, path
 
 
 # TODO load sets and classes dynamically 
-sets=['bicycle_train', 'bus_train', 'bicycle_val', 'bus_val', 'car_train', 'car_val', 'motorbike_train', 'motorbike_val']
+train_sets=['bicycle_train', 'bus_train', 'car_train', 'motorbike_train']
+
+val_sets = ['bicycle_val', 'bus_val', 'car_val', 'motorbike_val']
 
 sets_tm=['seg_train', 'seg_val', 'tu_llave_train', 'tu_llave_val']
 
@@ -31,16 +33,26 @@ def convert_annotation(image_id, list_file):
         b = (int(float(xmlbox.find('xmin').text)), int(float(xmlbox.find('ymin').text)), int(float(xmlbox.find('xmax').text)), int(float(xmlbox.find('ymax').text)))
         list_file.write(" " + ",".join([str(a) for a in b]) + ',' + str(cls_id))
 
-
-if __name__ == '__main__':
-    
-    with open('tags/train.txt', 'w') as list_file:
+def process_sets(sets, output_file):
+    with open(output_file, 'w') as list_file:
+        image_names = []
         for image_set in sets:
             image_ids = open(path.join(data_set_folder, 'ImageSets/Main/%s.txt'%(image_set))).read().strip().split()
             image_ids = [id for id in image_ids if id not in['1', '-1'] ]
-            for image_id in image_ids:
-                list_file.write(path.join(data_set_folder,'JPEGImages/%s.jpg'%(image_id)))
-                convert_annotation(image_id, list_file)
-                list_file.write('\n')
+            image_names = image_names + image_ids
+            
+        image_ids = list(set(image_names))
+            
+        for image_id in image_ids:
+            list_file.write(path.join(data_set_folder,'JPEGImages/%s.jpg'%(image_id)))
+            convert_annotation(image_id, list_file)
+            list_file.write('\n')
+
+
+if __name__ == '__main__':
+    
+    process_sets(train_sets, 'tags/train.txt')
+    
+    process_sets(val_sets, 'tags/val.txt')
     
     print("Complete")
