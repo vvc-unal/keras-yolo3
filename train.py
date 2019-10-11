@@ -18,6 +18,11 @@ from yolo3.utils import get_random_data
 
 import yolo3.model as yolo3_model
 
+import tensorflow as tf
+from tensorflow_model_optimization.sparsity import keras as sparsity
+
+from kerassurgeon.operations import delete_layer, insert_layer, delete_channels
+
 
 input_shape = (416, 416)  # multiple of 32, hw
 
@@ -172,6 +177,8 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
         
         model.save_weights(log_dir.joinpath('weights_final.h5'))
     
+    model.save_weights(model_folder.joinpath('weights.h5'))
+    
     # Further training if needed.
     
     plot_training_history(history, log_dir.joinpath('history.png'))
@@ -313,7 +320,7 @@ def create_vvc_model(body_func, input_shape, anchors, num_classes):
     print('Create VVC YOLOv3 model with {} anchors and {} classes.'.format(num_anchors, num_classes))
 
     model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
-        arguments={'anchors': anchors, 'num_classes': num_classes, 'ignore_thresh': 0.7})(
+        arguments={'anchors': anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5})(
         [*model_body.output, *y_true])
     model = Model([model_body.input, *y_true], model_loss)
     
@@ -343,6 +350,113 @@ def data_generator_wrapper(annotation_lines, batch_size, input_shape, anchors, n
     if n==0 or batch_size<=0: return None
     return data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes)
 
+def model_prunning():
+    
+    model_name = 'yolov3-prunned'
+    classes_path = 'model_data/coco_classes.txt'
+    anchors_path = 'model_data/yolo_anchors.txt'
+    
+    class_names = get_classes(classes_path)
+    num_classes = len(class_names)
+    anchors = get_anchors(anchors_path)
+    
+    train_annotation_path = 'tags/train.txt'
+    val_annotation_path = 'tags/val.txt'
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_dir = Path('logs/'+ model_name + ' {}/'.format(timestamp))
+    log_dir.mkdir(exist_ok=True)
+    model_folder = Path('model_data/' + model_name)
+    model_folder.mkdir(exist_ok=True)
+   
+    class_names = get_classes(classes_path)
+    num_classes = len(class_names)
+    anchors = get_anchors(anchors_path)
+    num_anchors = len(anchors)
+    
+    # Callbacks
+    logging = TensorBoard(log_dir=log_dir)
+    checkpoint = ModelCheckpoint(str(log_dir.joinpath('epoch{epoch:02d}-loss{loss:.2f}-val_loss{val_loss:.2f}.h5')),
+        monitor='val_loss', save_weights_only=True, save_best_only=True, period=5)
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=5, verbose=1)
+    csv_logger = CSVLogger(str(model_folder.joinpath('training_log.csv')))
+
+    # Train/Val split
+    with open(train_annotation_path) as f:
+        train_lines = f.readlines()
+    with open(val_annotation_path) as f:
+        val_lines = f.readlines()
+    
+    num_val = len(val_lines)
+    num_train = len(train_lines)
+    
+    batch_size = 2
+    
+    # Prunning
+    
+    # Load the serialized model
+    loaded_model = tf.keras.models.load_model('model_data/yolo_weights.h5', compile=False)
+    
+    #x.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
+    h, w = input_shape
+    
+    y_true = [Input(shape=(h//{0:32, 1:16, 2:8}[l], w//{0:32, 1:16, 2:8}[l], \
+        num_anchors//3, num_classes+5)) for l in range(3)]
+    
+    model_loss = tf.keras.layers.Lambda(yolo_loss, 
+                                        output_shape=(1,), 
+                                        name='yolo_loss',
+        arguments={'anchors': anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5})
+    
+    
+    #loaded_model.summary()
+    
+    print('last output: ', loaded_model.layers[-1].output)
+    
+    epochs = 4
+    end_step = np.ceil(1.0 * num_train / batch_size).astype(np.int32) * epochs
+    print(end_step)
+    
+    new_pruning_params = {
+          'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=0.50,
+                                                       final_sparsity=0.90,
+                                                       begin_step=0,
+                                                       end_step=end_step,
+                                                       frequency=100)
+    }
+    
+    new_pruned_model = sparsity.prune_low_magnitude(loaded_model, **new_pruning_params)
+    
+    #new_pruned_model.summary()
+    
+    print('last output: ', new_pruned_model.layers[-1].output)
+    
+    new_pruned_model.compile(optimizer='adam', loss=tf_yolo_loss)
+    
+    # Add a pruning step callback to peg the pruning step to the optimizer's
+    # step. Also add a callback to add pruning summaries to tensorboard
+    callbacks = [
+        sparsity.UpdatePruningStep(),
+        sparsity.PruningSummaries(log_dir=log_dir, profile_batch=0)
+    ]
+    
+    new_pruned_model.fit_generator(data_generator_wrapper(train_lines, batch_size, input_shape, anchors, num_classes),
+                steps_per_epoch=max(1, num_train//batch_size),
+                validation_data=data_generator_wrapper(val_lines, batch_size, input_shape, anchors, num_classes),
+                validation_steps=max(1, num_val//batch_size),
+                epochs=epochs,
+                verbose=0,
+                callbacks=callbacks
+                )
+    
+    score = new_pruned_model.evaluate_generator(data_generator_wrapper(val_lines, batch_size, input_shape, anchors, num_classes), verbose=0)
+    print('Test loss:', score[0])
+    print('Test accuracy:', score[1])
+    
+def tf_yolo_loss(args, anchors):
+    return anchors
+
 if __name__ == '__main__':
     #tiny_yolov3_training()
-    vvc_yolov3_training()
+    #vvc_yolov3_training()
+    model_prunning()
