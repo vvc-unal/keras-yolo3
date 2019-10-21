@@ -22,6 +22,19 @@ import tensorflow as tf
 from tensorflow_model_optimization.sparsity import keras as sparsity
 
 
+def get_session():
+    ''' Set tf backend to allow memory to grow, instead of claiming everything '''
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    return tf.Session(config=config)
+
+# use this environment flag to change which GPU to use
+#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+# set the modified tf session as backend in keras
+K.tensorflow_backend.set_session(get_session())
+
+
 input_shape = (416, 416)  # multiple of 32, hw
 
 def yolov3_training():
@@ -358,8 +371,8 @@ def model_prunning():
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
     
-    train_annotation_path = 'tags/train.txt'
-    val_annotation_path = 'tags/val.txt'
+    train_annotation_path = 'tags/coco_train2017.txt'
+    val_annotation_path = 'tags/coco_val2017.txt'
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     log_dir = Path('logs/'+ model_name + ' {}/'.format(timestamp))
     log_dir.mkdir(exist_ok=True)
@@ -388,7 +401,9 @@ def model_prunning():
     num_val = len(val_lines)
     num_train = len(train_lines)
     
-    batch_size = 16
+    batch_size = 8
+    
+    K.clear_session() # get a new session
     
     # Prunning
     
