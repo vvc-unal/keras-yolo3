@@ -388,7 +388,7 @@ def model_prunning():
     num_val = len(val_lines)
     num_train = len(train_lines)
     
-    batch_size = 8
+    batch_size = 16
     
     # Prunning
     
