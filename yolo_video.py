@@ -28,6 +28,11 @@ if __name__ == '__main__':
         '--model', type=str, dest='model_path', default='logs/000/trained_weights_final.h5',
         help='path to model weight file, default ' + YOLO.get_defaults("model_path")
     )
+    
+    parser.add_argument(
+        '--body', type=str, dest='body_name', default='yolo3',
+        help='Name of the body to use ' + YOLO.get_defaults("body_name")
+    )
 
     parser.add_argument(
         '--anchors', type=str, dest='anchors_path', default='model_data/vvc_anchors.txt',

@@ -28,6 +28,7 @@ class YOLO(object):
         "iou" : 0.45,
         "model_image_size" : (416, 416),
         "gpu_num" : 1,
+        "body_name": 'yolo3'
     }
 
     @classmethod
@@ -43,6 +44,8 @@ class YOLO(object):
         self.class_names = self._get_class()
         self.anchors = self._get_anchors()
         self.sess = K.get_session()
+        
+        self.__load_model()
         self.boxes, self.scores, self.classes = self.generate()
 
     def _get_class(self):
@@ -58,23 +61,41 @@ class YOLO(object):
             anchors = f.readline()
         anchors = [float(x) for x in anchors.split(',')]
         return np.array(anchors).reshape(-1, 2)
-
-    def generate(self):
-        model_path = os.path.expanduser(self.model_path)
-        assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
-
+    
+    def __load_model(self):
+        bodies = {'yolo3': [models.yolo_body, False],
+                  'tiny': [models.tiny_yolo_body, True],
+                  'vvc1': [models.vvc1_yolo_body, True],
+                  'vvc2': [models.vvc2_yolo_body, True],
+                  'vvc3': [models.vvc3_yolo_body, True],}
+        
+        assert self.body_name in bodies.keys(), 'Unknown body name: {}'.format(self.body_name)
+        
         # Load model, or construct model and load weights.
         num_anchors = len(self.anchors)
         num_classes = len(self.class_names)
         is_tiny_version = num_anchors==6 # default setting
+        
+        model_path = os.path.expanduser(self.model_path)
+        assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
+        
         try:
             self.yolo_model = load_model(model_path, compile=False)
         except:
-            if is_tiny_version:
+            if self.body_name is None and is_tiny_version:
                 self.yolo_model = tiny_yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes)
-                self.yolo_model = models.vvc1_yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes)
-            else:
+                
+            elif self.body_name is None:
                 self.yolo_model = yolo_body(Input(shape=(None,None,3)), num_anchors//3, num_classes)
+            else:
+                body_func, is_tiny_version = bodies.get(self.body_name)
+                if is_tiny_version:
+                    batch_size = num_anchors//2
+                else:
+                    batch_size = num_anchors//3
+                
+                self.yolo_model = body_func(Input(shape=(None,None,3)), batch_size, num_classes)
+                
             self.yolo_model.load_weights(self.model_path) # make sure model, anchors and classes match
         else:
             assert self.yolo_model.layers[-1].output_shape[-1] == \
@@ -82,7 +103,8 @@ class YOLO(object):
                 'Mismatch between model and given anchor and class sizes'
 
         print('{} model, anchors, and classes loaded.'.format(model_path))
-
+    
+    def generate(self):
         # Generate colors for drawing bounding boxes.
         hsv_tuples = [(x / len(self.class_names), 1., 1.)
                       for x in range(len(self.class_names))]

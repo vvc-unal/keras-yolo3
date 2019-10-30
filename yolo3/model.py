@@ -1,5 +1,4 @@
 """YOLO_v3 Model Defined in Keras."""
-
 from functools import wraps
 
 import numpy as np

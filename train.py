@@ -176,7 +176,7 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
         model.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
         print('Unfreeze all of the {} layers.'.format(len(model.layers)))
 
-        batch_size = 16 # note that more GPU memory is required after unfreezing the body
+        batch_size = 12 # note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         history = model.fit_generator(data_generator_wrapper(train_lines, batch_size, input_shape, anchors, num_classes),
             steps_per_epoch=max(1, num_train//batch_size),
@@ -385,12 +385,6 @@ def model_prunning():
     num_anchors = len(anchors)
     
     # Callbacks
-    logging = TensorBoard(log_dir=log_dir)
-    checkpoint = ModelCheckpoint(str(log_dir.joinpath('epoch{epoch:02d}-loss{loss:.2f}-val_loss{val_loss:.2f}.h5')),
-        monitor='val_loss', save_weights_only=True, save_best_only=True, period=5)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
-    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=5, verbose=1)
-    csv_logger = CSVLogger(str(model_folder.joinpath('training_log.csv')))
 
     # Train/Val split
     with open(train_annotation_path) as f:
@@ -401,7 +395,7 @@ def model_prunning():
     num_val = len(val_lines)
     num_train = len(train_lines)
     
-    batch_size = 8
+    batch_size = 10
     
     K.clear_session() # get a new session
     
@@ -433,12 +427,12 @@ def model_prunning():
     train_model.summary()
     
         
-    epochs = 4
+    epochs = 2
     end_step = np.ceil(1.0 * num_train / batch_size).astype(np.int32) * epochs
     print(end_step)
     
     new_pruning_params = {
-          'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=0.50,
+          'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=0.10,
                                                        final_sparsity=0.90,
                                                        begin_step=0,
                                                        end_step=end_step,
