@@ -2,6 +2,7 @@
 Retrain the YOLO model for your own dataset.
 """
 import csv
+import string
 from datetime import datetime
 from pathlib import Path
 
@@ -36,6 +37,18 @@ K.tensorflow_backend.set_session(get_session())
 
 
 input_shape = (416, 416)  # multiple of 32, hw
+
+vvc_dataset = {'train_file': 'tags/train.txt', 
+               'val_file': 'tags/val.txt', 
+               'classes_file': 'model_data/voc_classes.txt'}
+
+coco_dataset = {'train_file': 'tags/coco_train2017.txt', 
+                'val_file': 'tags/coco_val2017.txt', 
+                'classes_file': 'model_data/coco_classes.txt'}
+
+coco_dataset_small = {'train_file': 'tags/coco_train2017_10.txt', 
+                      'val_file': 'tags/coco_val2017_10.txt', 
+                      'classes_file': 'model_data/coco_classes.txt'}
 
 def yolov3_training():
     model_name = 'yolov3-transfer'
@@ -77,24 +90,26 @@ def tiny_yolov3_training():
              frozen_epochs=0, 
              unfreeze_epochs=50)
 
+
 def vvc_yolov3_training():
     model_name = 'vvc3-yolov3'
-    classes_path = 'model_data/voc_classes.txt'
-    anchors_path = 'model_data/anchors/tiny-yolov3-transfer.txt'
+    dataset = coco_dataset_small
+    classes_path = dataset['classes_file']
+    anchors_path = 'model_data/anchors/coco_tiny-yolov3-transfer.txt'
     
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
     
-    assert len(anchors)==6 # default setting
+    assert len(anchors) == 6 # default setting
             
-    model = create_vvc_model(yolo3_model.vvc2_yolo_body, input_shape, anchors, num_classes)
+    model = create_vvc_model(yolo3_model.vvc3_yolo_body, input_shape, anchors, num_classes)
     
     training(model_name=model_name,
              model=model, 
-             classes_path=classes_path, 
+             dataset=dataset, 
              anchors_path=anchors_path, 
-             unfreeze_epochs=50)
+             unfreeze_epochs=2)
     
         
 def read_training_log(model_name):
@@ -119,24 +134,26 @@ def read_training_log(model_name):
     return training_log
             
 
-def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unfreeze_epochs=50):
+def training(model_name, model, dataset, anchors_path, frozen_epochs=0, unfreeze_epochs=50):
     
-    train_annotation_path = 'tags/train.txt'
-    val_annotation_path = 'tags/val.txt'
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_dir = Path('logs/'+ model_name + ' f{:02d} u{:02d} {}/'.format(frozen_epochs, unfreeze_epochs,timestamp))
+    train_annotation_path = dataset['train_file']
+    val_annotation_path = dataset['val_file']
+    timestamp = datetime.now().strftime('%y%m%d_%H%M')
+    log_dir = Path('logs/'+ model_name + ' {} f{:02d} u{:02d} /'.format(timestamp, frozen_epochs, unfreeze_epochs))
     log_dir.mkdir(exist_ok=True)
     model_folder = Path('model_data/' + model_name)
     model_folder.mkdir(exist_ok=True)
+    total_epochs = frozen_epochs + unfreeze_epochs
    
-    class_names = get_classes(classes_path)
+    class_names = get_classes(dataset['classes_file'])
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
     
     # Callbacks
     logging = TensorBoard(log_dir=log_dir)
-    checkpoint = ModelCheckpoint(str(log_dir.joinpath('epoch{epoch:02d}-loss{loss:.2f}-val_loss{val_loss:.2f}.h5')),
-        monitor='val_loss', save_weights_only=True, save_best_only=True, period=5)
+    checkpoint = ModelCheckpoint(str(log_dir.joinpath('epoch{epoch:02d}.h5')),
+        monitor='val_loss', save_weights_only=True, save_best_only=True, 
+        period=max(1, total_epochs//10))
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=5, verbose=1)
     csv_logger = CSVLogger(str(model_folder.joinpath('training_log.csv')))
@@ -159,13 +176,17 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
 
         batch_size = 32
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
-        history = model.fit_generator(data_generator_wrapper(train_lines, batch_size, input_shape, anchors, num_classes),
-                steps_per_epoch=max(1, num_train//batch_size),
-                validation_data=data_generator_wrapper(val_lines, batch_size, input_shape, anchors, num_classes),
-                validation_steps=max(1, num_val//batch_size),
-                epochs=frozen_epochs,
-                initial_epoch=0,
-                callbacks=[logging, checkpoint, csv_logger])
+        train_data_generator = data_generator_wrapper(train_lines, batch_size, input_shape, anchors, num_classes)
+        val_data_generator = data_generator_wrapper(val_lines, batch_size, input_shape, anchors, num_classes)
+        
+        history = model.fit_generator(
+            train_data_generator,
+            steps_per_epoch=max(1, num_train//batch_size),
+            validation_data=val_data_generator,
+            validation_steps=max(1, num_val//batch_size),
+            epochs=frozen_epochs,
+            initial_epoch=0,
+            callbacks=[logging, checkpoint, csv_logger])
         model.save_weights(log_dir.joinpath('weights_stage_1.h5'))
 
     # Unfreeze and continue training, to fine-tune.
@@ -176,19 +197,24 @@ def training(model_name, model, classes_path, anchors_path, frozen_epochs=0, unf
         model.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
         print('Unfreeze all of the {} layers.'.format(len(model.layers)))
 
-        batch_size = 12 # note that more GPU memory is required after unfreezing the body
+        batch_size = 12 # (16) note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
-        history = model.fit_generator(data_generator_wrapper(train_lines, batch_size, input_shape, anchors, num_classes),
+        train_data_generator = data_generator_wrapper(train_lines, batch_size, input_shape, anchors, num_classes)
+        val_data_generator = data_generator_wrapper(val_lines, batch_size, input_shape, anchors, num_classes)
+        
+        history = model.fit_generator(
+            train_data_generator,
             steps_per_epoch=max(1, num_train//batch_size),
-            validation_data=data_generator_wrapper(val_lines, batch_size, input_shape, anchors, num_classes),
+            validation_data=val_data_generator,
             validation_steps=max(1, num_val//batch_size),
-            epochs=frozen_epochs + unfreeze_epochs,
+            epochs=total_epochs,
             initial_epoch=frozen_epochs,
             callbacks=[logging, checkpoint, csv_logger, reduce_lr, early_stopping])
         
-        model.save_weights(log_dir.joinpath('weights_final.h5'))
+        model.save_weights(log_dir.joinpath('weights.h5'))
     
-    model.save_weights(model_folder.joinpath('weights.h5'))
+    save_anchors(anchors, log_dir.joinpath('anchors.txt'))
+    save_class_names(class_names, log_dir.joinpath('classes.txt'))
     
     # Further training if needed.
     
@@ -249,12 +275,27 @@ def get_classes(classes_path):
     class_names = [c.strip() for c in class_names]
     return class_names
 
+
+def save_class_names(class_names, path):
+    with open(path, 'w') as file:
+        for name in class_names:
+            file.write(name + '\n')
+
+
 def get_anchors(anchors_path):
     '''loads the anchors from a file'''
     with open(anchors_path) as f:
         anchors = f.readline()
     anchors = [float(x) for x in anchors.split(',')]
     return np.array(anchors).reshape(-1, 2)
+
+
+def save_anchors(anchors, path):
+    anchors_list = anchors.reshape(1, -1).astype(int).tolist()
+    with open(path, 'w') as file:
+        line = ', '.join(str(i) for i in anchors_list)
+        line = line.replace('[', '').replace(']', '')
+        file.write(line)
 
 
 def create_model(input_shape, anchors, num_classes, load_pretrained=True, freeze_body=2,
@@ -498,5 +539,5 @@ def tf_yolo_loss(args, anchors):
 if __name__ == '__main__':
     #yolov3_training()
     #tiny_yolov3_training()
-    #vvc_yolov3_training()
-    model_prunning()
+    vvc_yolov3_training()
+    #model_prunning()

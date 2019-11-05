@@ -67,7 +67,8 @@ class YOLO(object):
                   'tiny': [models.tiny_yolo_body, True],
                   'vvc1': [models.vvc1_yolo_body, True],
                   'vvc2': [models.vvc2_yolo_body, True],
-                  'vvc3': [models.vvc3_yolo_body, True],}
+                  'vvc3': [models.vvc3_yolo_body, True],
+                  }
         
         assert self.body_name in bodies.keys(), 'Unknown body name: {}'.format(self.body_name)
         
@@ -95,7 +96,11 @@ class YOLO(object):
                     batch_size = num_anchors//3
                 
                 self.yolo_model = body_func(Input(shape=(None,None,3)), batch_size, num_classes)
-                
+            
+            print('num_anchors: ', self.anchors)
+            print('num_classes: ', self.class_names)
+            print('batch_size: ', batch_size)
+            print('model_path: ', self.model_path)
             self.yolo_model.load_weights(self.model_path) # make sure model, anchors and classes match
         else:
             assert self.yolo_model.layers[-1].output_shape[-1] == \
@@ -138,7 +143,7 @@ class YOLO(object):
             boxed_image = letterbox_image(image, new_image_size)
         image_data = np.array(boxed_image, dtype='float32')
 
-        print(image_data.shape)
+        print('Image shape', image_data.shape)
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
 
@@ -189,7 +194,7 @@ class YOLO(object):
             del draw
 
         end = timer()
-        print(end - start)
+        print('Time:', end - start)
         return image
 
     def close_session(self):

@@ -116,4 +116,11 @@ if __name__ == "__main__":
     find_anchors(filename, 9, "model_data/anchors/yolov3-transfer.txt")
     find_anchors(filename, 6, "model_data/anchors/tiny-yolov3-transfer.txt")
     
+    # Coco
+    print('COCO dataset')
+    filename = "tags/coco_train2017.txt"
+        
+    find_anchors(filename, 9, "model_data/anchors/coco_yolov3-transfer.txt")
+    find_anchors(filename, 6, "model_data/anchors/coco_tiny-yolov3-transfer.txt")
+    
     

@@ -1,4 +1,5 @@
 import json
+import random
 from pathlib import Path
 from collections import defaultdict
 
@@ -7,7 +8,6 @@ vvc_classes = [1, 2, 3, 5, 7]
 
 def load_coco_tags(set_name='train2017'):
     name_box_id = defaultdict(list)
-    id_name = dict()
     f = open(
         coco_folder + "annotations/instances_{}.json".format(set_name),
         encoding='utf-8')
@@ -15,8 +15,8 @@ def load_coco_tags(set_name='train2017'):
     
     annotations = data['annotations']
     for ant in annotations:
-        id = ant['image_id']
-        name = coco_folder + '{}/{:012d}.jpg'.format(set_name, id)
+        image_id = ant['image_id']
+        name = coco_folder + '{}/{:012d}.jpg'.format(set_name, image_id)
         cat = ant['category_id']
         
         if Path(name).exists():
@@ -44,9 +44,11 @@ def load_coco_tags(set_name='train2017'):
     print("images: ", len(name_box_id.keys()))
     
     f = open('tags/coco_{}.txt'.format(set_name), 'w')
+    small_f = open('tags/coco_{}_10.txt'.format(set_name), 'w')
+    
     for key in name_box_id.keys():
         
-        f.write(key)
+        line = str(key)
         
         box_infos = name_box_id[key]
         for info in box_infos:
@@ -60,9 +62,15 @@ def load_coco_tags(set_name='train2017'):
                 x_min, y_min, x_max, y_max, obj_class)
             
             if obj_class in vvc_classes:
-                f.write(box_info)
-        f.write('\n')
+                line += box_info
+        
+        line += '\n'
+        
+        f.write(line)
+        if random.random() < 0.1:
+            small_f.write(line)
     f.close()
+    small_f.close()
     
 if __name__ == '__main__':
     load_coco_tags('train2017')

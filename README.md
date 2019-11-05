@@ -20,6 +20,8 @@ wget https://pjreddie.com/media/files/yolov3.weights
 python convert.py yolov3.cfg yolov3.weights model_data/yolo.h5
 python yolo_video.py [OPTIONS...] --image, for image detection mode, OR
 python yolo_video.py [video_path] [output_path (optional)]
+python yolo_video.py --classes model_data/voc_classes.txt  --input ~/workspace/Maestria/Videos/Original/MOV_0861.mp4 --anchors model_data/anchors/tiny-yolov3-transfer.txt --body vvc3 --model logs/vvc3-yolov3\ f000\ u050\ 20190831_164740/weights_final.h5
+
 ```
 
 For Tiny YOLOv3, just do in a similar way, just specify model path and anchor path with `--model model_file` and `--anchors anchor_file`.
