@@ -69,7 +69,7 @@ class YOLO(object):
                   'vvc2': [models.vvc2_yolo_body, True],
                   'vvc3': [models.vvc3_yolo_body, True],
                   }
-        
+
         assert self.body_name in bodies.keys(), 'Unknown body name: {}'.format(self.body_name)
         
         # Load model, or construct model and load weights.
@@ -101,7 +101,7 @@ class YOLO(object):
             print('num_classes: ', self.class_names)
             print('batch_size: ', batch_size)
             print('model_path: ', self.model_path)
-            self.yolo_model.load_weights(self.model_path) # make sure model, anchors and classes match
+            self.yolo_model.load_weights(self.model_path)  # make sure model, anchors and classes match
         else:
             assert self.yolo_model.layers[-1].output_shape[-1] == \
                 num_anchors/len(self.yolo_model.output) * (num_classes + 5), \
@@ -143,7 +143,8 @@ class YOLO(object):
             boxed_image = letterbox_image(image, new_image_size)
         image_data = np.array(boxed_image, dtype='float32')
 
-        print('Image shape', image_data.shape)
+        print('Model_image: ', self.model_image_size)
+        print('Image shape', image_data.shape, image_data.mean(), image_data.std())
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
 

@@ -45,11 +45,11 @@ def load_coco_tags(set_name='train2017'):
     
     f = open('tags/coco_{}.txt'.format(set_name), 'w')
     small_f = open('tags/coco_{}_10.txt'.format(set_name), 'w')
-    
+
     for key in name_box_id.keys():
         
         line = str(key)
-        
+        img_with_vehicles = False
         box_infos = name_box_id[key]
         for info in box_infos:
             x_min = int(info[0][0])
@@ -62,16 +62,19 @@ def load_coco_tags(set_name='train2017'):
                 x_min, y_min, x_max, y_max, obj_class)
             
             if obj_class in vvc_classes:
+                img_with_vehicles = True
                 line += box_info
         
         line += '\n'
         
-        f.write(line)
-        if random.random() < 0.1:
-            small_f.write(line)
+        if img_with_vehicles:
+            f.write(line)
+            if random.random() < 0.64:
+                small_f.write(line)
     f.close()
     small_f.close()
-    
+
+
 if __name__ == '__main__':
     load_coco_tags('train2017')
     load_coco_tags('val2017')

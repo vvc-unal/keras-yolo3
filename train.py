@@ -44,11 +44,11 @@ vvc_dataset = {'train_file': 'tags/train.txt',
 
 coco_dataset = {'train_file': 'tags/coco_train2017.txt', 
                 'val_file': 'tags/coco_val2017.txt', 
-                'classes_file': 'model_data/coco_classes.txt'}
+                'classes_file': 'model_data/coco10_classes.txt'}
 
 coco_dataset_small = {'train_file': 'tags/coco_train2017_10.txt', 
                       'val_file': 'tags/coco_val2017_10.txt', 
-                      'classes_file': 'model_data/coco_classes.txt'}
+                      'classes_file': 'model_data/coco10_classes.txt'}
 
 def yolov3_training():
     model_name = 'yolov3-transfer'
@@ -68,7 +68,8 @@ def yolov3_training():
              anchors_path=anchors_path, 
              frozen_epochs=50, 
              unfreeze_epochs=50)
-    
+
+
 def tiny_yolov3_training():
     model_name = 'tiny-yolov3-pretrained'
     classes_path = 'model_data/voc_classes.txt'
@@ -93,15 +94,15 @@ def tiny_yolov3_training():
 
 def vvc_yolov3_training():
     model_name = 'vvc3-yolov3'
-    dataset = coco_dataset_small
+    dataset = coco_dataset
     classes_path = dataset['classes_file']
-    anchors_path = 'model_data/anchors/coco_tiny-yolov3-transfer.txt'
+    anchors_path = 'model_data/tiny_yolo_anchors.txt'
     
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
     
-    assert len(anchors) == 6 # default setting
+    assert len(anchors) == 6  # default setting
             
     model = create_vvc_model(yolo3_model.vvc3_yolo_body, input_shape, anchors, num_classes)
     
@@ -109,7 +110,7 @@ def vvc_yolov3_training():
              model=model, 
              dataset=dataset, 
              anchors_path=anchors_path, 
-             unfreeze_epochs=2)
+             unfreeze_epochs=4)
     
         
 def read_training_log(model_name):
@@ -197,7 +198,7 @@ def training(model_name, model, dataset, anchors_path, frozen_epochs=0, unfreeze
         model.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
         print('Unfreeze all of the {} layers.'.format(len(model.layers)))
 
-        batch_size = 12 # (16) note that more GPU memory is required after unfreezing the body
+        batch_size = 12  # (16) note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         train_data_generator = data_generator_wrapper(train_lines, batch_size, input_shape, anchors, num_classes)
         val_data_generator = data_generator_wrapper(val_lines, batch_size, input_shape, anchors, num_classes)
