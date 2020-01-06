@@ -31,6 +31,13 @@ class YOLO(object):
         "body_name": 'yolo3'
     }
 
+    bodies = {'yolo3': [models.yolo_body, False],
+              'tiny': [models.tiny_yolo_body, True],
+              'vvc1': [models.vvc1_yolo_body, True],
+              'vvc2': [models.vvc2_yolo_body, True],
+              'vvc3': [models.vvc3_yolo_body, True],
+              }
+
     @classmethod
     def get_defaults(cls, n):
         if n in cls._defaults:
@@ -63,14 +70,8 @@ class YOLO(object):
         return np.array(anchors).reshape(-1, 2)
     
     def __load_model(self):
-        bodies = {'yolo3': [models.yolo_body, False],
-                  'tiny': [models.tiny_yolo_body, True],
-                  'vvc1': [models.vvc1_yolo_body, True],
-                  'vvc2': [models.vvc2_yolo_body, True],
-                  'vvc3': [models.vvc3_yolo_body, True],
-                  }
 
-        assert self.body_name in bodies.keys(), 'Unknown body name: {}'.format(self.body_name)
+        assert self.body_name in self.bodies.keys(), 'Unknown body name: {}'.format(self.body_name)
         
         # Load model, or construct model and load weights.
         num_anchors = len(self.anchors)
@@ -89,7 +90,7 @@ class YOLO(object):
             elif self.body_name is None:
                 self.yolo_model = yolo_body(Input(shape=(None,None,3)), num_anchors//3, num_classes)
             else:
-                body_func, is_tiny_version = bodies.get(self.body_name)
+                body_func, is_tiny_version = self.bodies.get(self.body_name)
                 if is_tiny_version:
                     batch_size = num_anchors//2
                 else:

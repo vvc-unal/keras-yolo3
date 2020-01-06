@@ -122,8 +122,8 @@ def training(model_name, model, dataset, anchors_path, frozen_epochs=0, unfreeze
 
     train_annotation_path = dataset['train_file']
     val_annotation_path = dataset['val_file']
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M')
-    log_sufix = ' {} f{:02d} u{:02d} /'.format(timestamp, frozen_epochs, unfreeze_epochs)
+    timestamp = datetime.now().strftime('%Y%m%d-%H%M')
+    log_sufix = ' {}_f{:02d}_u{:02d}/'.format(timestamp, frozen_epochs, unfreeze_epochs)
     log_dir = dirPath.joinpath('logs/').joinpath(model_name + log_sufix)
     log_dir.mkdir(exist_ok=True)
     model_folder = dirPath.joinpath('model_data/' + model_name)
@@ -196,7 +196,8 @@ def training(model_name, model, dataset, anchors_path, frozen_epochs=0, unfreeze
             validation_steps=max(1, num_val//batch_size),
             epochs=total_epochs,
             initial_epoch=frozen_epochs,
-            callbacks=[logging, checkpoint, csv_logger, reduce_lr, early_stopping])
+            callbacks=[logging, checkpoint, csv_logger, reduce_lr, early_stopping],
+        )
 
         model.save_weights(log_dir.joinpath('weights.h5'))
 
