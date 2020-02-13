@@ -85,6 +85,7 @@ def yolo_body(inputs, num_anchors, num_classes):
 
     return Model(inputs, [y1,y2,y3])
 
+
 def tiny_yolo_body(inputs, num_anchors, num_classes):
     '''Create Tiny YOLO_v3 model CNN body in keras.'''
     x1 = compose(
@@ -117,6 +118,7 @@ def tiny_yolo_body(inputs, num_anchors, num_classes):
 
     return Model(inputs, [y1,y2])
 
+
 def vvc1_yolo_body(inputs, num_anchors, num_classes):
     '''Create a based Tiny YOLO_v3 model CNN body in keras.'''
     x1 = compose(
@@ -138,17 +140,17 @@ def vvc1_yolo_body(inputs, num_anchors, num_classes):
             DarknetConv2D_BN_Leaky(256, (1,1)))(x1)
     y1 = compose(
             DarknetConv2D_BN_Leaky(512, (3,3)),
-            DarknetConv2D(num_anchors*(num_classes+5), (1,1)))(x2)
+            DarknetConv2D(num_anchors*(num_classes+5), (1, 1)))(x2)
 
     x2 = compose(
-            DarknetConv2D_BN_Leaky(128, (1,1)),
+            DarknetConv2D_BN_Leaky(128, (1, 1)),
             UpSampling2D(2))(x2)
     y2 = compose(
             Concatenate(),
-            DarknetConv2D_BN_Leaky(256, (3,3)),
-            DarknetConv2D(num_anchors*(num_classes+5), (1,1)))([x2,x1])
+            DarknetConv2D_BN_Leaky(256, (3, 3)),
+            DarknetConv2D(num_anchors*(num_classes+5), (1, 1)))([x2, x1])
 
-    return Model(inputs, [y1,y2])
+    return Model(inputs, [y1, y2])
 
 def vvc2_yolo_body(inputs, num_anchors, num_classes):
     '''Create a based Tiny YOLO_v3 model CNN body in keras.'''
