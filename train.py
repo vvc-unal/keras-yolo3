@@ -2,7 +2,6 @@
 Retrain the YOLO model for your own dataset.
 """
 import csv
-import string
 from datetime import datetime
 from pathlib import Path
 
@@ -12,13 +11,10 @@ from keras.layers import Input, Lambda
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, CSVLogger
-from pathlib import Path
 import matplotlib.pyplot as plt
 
 from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
 from yolo3.utils import get_random_data
-
-import yolo3.model as yolo3_model
 
 import tensorflow as tf
 from tensorflow_model_optimization.sparsity import keras as sparsity
@@ -49,9 +45,8 @@ coco_dataset = {'train_file': dirPath.joinpath('tags/coco_train2017.txt'),
                 'val_file': dirPath.joinpath('tags/coco_val2017.txt'),
                 'classes_file': dirPath.joinpath('model_data/coco10_classes.txt')}
 
-coco_dataset_small = {'train_file': 'tags/coco_train2017_10.txt',
-                      'val_file': 'tags/coco_val2017_10.txt',
-                      'classes_file': 'model_data/coco10_classes.txt'}
+FROZEN_EPOCHS = 10
+UNFREEZE_EPOCHS = 10
 
 
 def yolov3_training():
@@ -68,10 +63,11 @@ def yolov3_training():
 
     training(model_name=model_name,
              model=model,
-             classes_path=classes_path,
+             dataset=coco_dataset,
              anchors_path=anchors_path,
-             frozen_epochs=50,
-             unfreeze_epochs=50)
+             frozen_epochs=FROZEN_EPOCHS,
+             unfreeze_epochs=UNFREEZE_EPOCHS
+             )
 
 
 def tiny_yolov3_training():
@@ -90,10 +86,11 @@ def tiny_yolov3_training():
 
     training(model_name=model_name,
              model=model,
-             classes_path=classes_path,
+             dataset=coco_dataset,
              anchors_path=anchors_path,
-             frozen_epochs=0,
-             unfreeze_epochs=50)
+             frozen_epochs=50,
+             unfreeze_epochs=50
+             )
 
 
 def read_training_log(model_name):
@@ -525,7 +522,8 @@ def model_prunning():
 def tf_yolo_loss(args, anchors):
     return anchors
 
+
 if __name__ == '__main__':
-    #yolov3_training()
-    #tiny_yolov3_training()
-    model_prunning()
+    yolov3_training()
+    tiny_yolov3_training()
+    # model_prunning()

@@ -26,15 +26,15 @@ class TrainVVC(unittest.TestCase):
 
         model = create_vvc_model(body_func, input_shape, anchors, num_classes)
 
-        plot_model(model, to_file=model_name + '_model.png')
+        plot_model(model, to_file='img/' + model_name + '_model.png')
 
         print_summary(model)
 
-        #training(model_name=model_name,
-         #        model=model,
-        #        dataset=dataset,
-        #         anchors_path=anchors_path,
-        #         unfreeze_epochs=self.epochs)
+        training(model_name=model_name,
+                 model=model,
+                 dataset=dataset,
+                 anchors_path=anchors_path,
+                 unfreeze_epochs=self.epochs)
 
     def test_vvc1(self):
         model_name = 'vvc1-yolov3'
@@ -46,6 +46,14 @@ class TrainVVC(unittest.TestCase):
 
     def test_vvc3(self):
         model_name = 'vvc3-yolov3'
+        self.train_vvc_model(model_name, model_name.split('-')[0])
+
+    def test_vvc4(self):
+        model_name = 'vvc4-yolov3'
+        self.train_vvc_model(model_name, model_name.split('-')[0])
+
+    def test_vvc5(self):
+        model_name = 'vvc5-yolov3'
         self.train_vvc_model(model_name, model_name.split('-')[0])
 
 

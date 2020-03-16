@@ -152,6 +152,7 @@ def vvc1_yolo_body(inputs, num_anchors, num_classes):
 
     return Model(inputs, [y1, y2])
 
+
 def vvc2_yolo_body(inputs, num_anchors, num_classes):
     '''Create a based Tiny YOLO_v3 model CNN body in keras.'''
     x1 = compose(
@@ -185,6 +186,7 @@ def vvc2_yolo_body(inputs, num_anchors, num_classes):
 
     return Model(inputs, [y1,y2])
 
+
 def vvc3_yolo_body(inputs, num_anchors, num_classes):
     '''Create a based Tiny YOLO_v3 model CNN body. Remove one Conv layer'''
     x1 = compose(
@@ -214,6 +216,84 @@ def vvc3_yolo_body(inputs, num_anchors, num_classes):
             DarknetConv2D(num_anchors*(num_classes+5), (1,1)))([x2,x1])
 
     return Model(inputs, [y1,y2])
+
+
+def vvc4_yolo_body(inputs, num_anchors, num_classes):
+    """Create a based Tiny YOLO_v3 model CNN body in keras."""
+    x1 = compose(
+            DarknetConv2D_BN_Leaky(16, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(32, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(64, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(128, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(256, (3, 3)),
+            Dropout(0.2)
+        )(inputs)
+    x2 = compose(
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(512, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(1, 1), padding='same'),
+            DarknetConv2D_BN_Leaky(1024, (3, 3)),
+            DarknetConv2D_BN_Leaky(256, (1, 1))
+        )(x1)
+    y1 = compose(
+            DarknetConv2D_BN_Leaky(512, (3, 3)),
+            DarknetConv2D(num_anchors*(num_classes+5), (1, 1))
+        )(x2)
+
+    x2 = compose(
+            DarknetConv2D_BN_Leaky(128, (1, 1)),
+            UpSampling2D(2)
+        )(x2)
+    y2 = compose(
+            Concatenate(),
+            DarknetConv2D_BN_Leaky(256, (3, 3)),
+            DarknetConv2D(num_anchors*(num_classes+5), (1, 1))
+        )([x2, x1])
+
+    return Model(inputs, [y1, y2])
+
+
+def vvc5_yolo_body(inputs, num_anchors, num_classes):
+    x1 = compose(
+            DarknetConv2D_BN_Leaky(16, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(32, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(64, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(128, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(256, (3, 3)),
+        )(inputs)
+    x2a = compose(
+            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
+            DarknetConv2D_BN_Leaky(512, (3, 3)),
+            MaxPooling2D(pool_size=(2, 2), strides=(1, 1), padding='same'),
+            DarknetConv2D_BN_Leaky(1024, (3, 3)),
+            DarknetConv2D_BN_Leaky(256, (1, 1)),
+            Dropout(0.2) # new layer
+        )(x1)
+    y1 = compose(
+            DarknetConv2D_BN_Leaky(512, (3, 3)),
+            DarknetConv2D(num_anchors*(num_classes+5), (1, 1))
+        )(x2a)
+
+    x2b = compose(
+            DarknetConv2D_BN_Leaky(128, (1, 1)),
+            UpSampling2D(2)
+        )(x2a)
+    y2 = compose(
+            Concatenate(),
+            DarknetConv2D_BN_Leaky(256, (3, 3)),
+            DarknetConv2D(num_anchors*(num_classes+5), (1, 1))
+        )([x2b, x1])
+
+    return Model(inputs, [y1, y2])
+
 
 def yolo_head(feats, anchors, num_classes, input_shape, calc_loss=False):
     """Convert final layer features to bounding box parameters."""
@@ -487,7 +567,7 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
             best_iou = K.max(iou, axis=-1)
             ignore_mask = ignore_mask.write(b, K.cast(best_iou<ignore_thresh, K.dtype(true_box)))
             return b+1, ignore_mask
-        _, ignore_mask = K.control_flow_ops.while_loop(lambda b,*args: b<m, loop_body, [0, ignore_mask])
+        _, ignore_mask = tf.while_loop(lambda b, *args: b < m, loop_body, [0, ignore_mask])
         ignore_mask = ignore_mask.stack()
         ignore_mask = K.expand_dims(ignore_mask, -1)
 

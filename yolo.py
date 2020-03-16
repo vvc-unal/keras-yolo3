@@ -36,6 +36,8 @@ class YOLO(object):
               'vvc1': [models.vvc1_yolo_body, True],
               'vvc2': [models.vvc2_yolo_body, True],
               'vvc3': [models.vvc3_yolo_body, True],
+              'vvc4': [models.vvc4_yolo_body, True],
+              'vvc5': [models.vvc5_yolo_body, True],
               }
 
     @classmethod
