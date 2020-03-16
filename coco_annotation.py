@@ -6,7 +6,8 @@ from collections import defaultdict
 coco_folder = "/home/juan/workspace/Maestria/Datasets/COCO/"
 vvc_classes = [1, 2, 3, 5, 7]
 
-def load_coco_tags(set_name='train2017'):
+
+def load_coco_tags(set_name='train2017', val_split=0):
     name_box_id = defaultdict(list)
     f = open(
         coco_folder + "annotations/instances_{}.json".format(set_name),
@@ -20,23 +21,23 @@ def load_coco_tags(set_name='train2017'):
         cat = ant['category_id']
         
         if Path(name).exists():
-            if cat >= 1 and cat <= 11:
+            if 1 <= cat <= 11:
                 cat = cat - 1
-            elif cat >= 13 and cat <= 25:
+            elif 13 <= cat <= 25:
                 cat = cat - 2
-            elif cat >= 27 and cat <= 28:
+            elif 27 <= cat <= 28:
                 cat = cat - 3
-            elif cat >= 31 and cat <= 44:
+            elif 31 <= cat <= 44:
                 cat = cat - 5
-            elif cat >= 46 and cat <= 65:
+            elif 46 <= cat <= 65:
                 cat = cat - 6
             elif cat == 67:
                 cat = cat - 7
             elif cat == 70:
                 cat = cat - 9
-            elif cat >= 72 and cat <= 82:
+            elif 72 <= cat <= 82:
                 cat = cat - 10
-            elif cat >= 84 and cat <= 90:
+            elif 84 <= cat <= 90:
                 cat = cat - 11
             
             name_box_id[name].append([ant['bbox'], cat])
@@ -44,7 +45,6 @@ def load_coco_tags(set_name='train2017'):
     print("images: ", len(name_box_id.keys()))
     
     f = open('tags/coco_{}.txt'.format(set_name), 'w')
-    small_f = open('tags/coco_{}_10.txt'.format(set_name), 'w')
 
     for key in name_box_id.keys():
         
@@ -69,13 +69,11 @@ def load_coco_tags(set_name='train2017'):
         
         if img_with_vehicles:
             f.write(line)
-            if random.random() < 0.64:
-                small_f.write(line)
+            if random.random() < val_split:
+                print('val_split')
     f.close()
-    small_f.close()
 
 
 if __name__ == '__main__':
     load_coco_tags('train2017')
     load_coco_tags('val2017')
-
