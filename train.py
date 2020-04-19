@@ -389,6 +389,7 @@ def data_generator_wrapper(annotation_lines, batch_size, input_shape, anchors, n
     if n==0 or batch_size<=0: return None
     return data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes)
 
+
 def model_prunning():
 
     model_name = 'yolov3-prunned'
@@ -515,8 +516,6 @@ def model_prunning():
                 w.size, np.sum(w == 0) / w.size * 100
             )
     )
-
-
 
 
 def tf_yolo_loss(args, anchors):
